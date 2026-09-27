@@ -279,6 +279,12 @@ void print_big_grid(
 							return _t[_k] - _tau / 2;
 						}
 					);
+		matrix u1 = implicit_scheme(
+						N, M, T, context, 1,
+						[](vec _t, int _k, double _tau){
+							return _t[_k];
+						}
+					);
 		
 		vec x(N + 1);
 		for (int i=0; i<=N; ++i)
@@ -294,6 +300,8 @@ void print_big_grid(
 		printf("implicit sigma=0.5\n");
 		helper_big_grid(N, M, t, x, u05);
 
+		printf("implicit sigma=1\n");
+		helper_big_grid(N, M, t, x, u1);
 		
 
 		N *= 2;
@@ -373,18 +381,17 @@ void print_residuals(
 		N *= 2;
 	}
 
-
+	int M = 100;
+	printf("\n\nM_implicit=%d\n", M);
 	printf("implicit sigma=0.5:\n");
 	N = 10;
 	for (int j=0; j<5; ++j)
 	{
 
-		int M = get_opt_m(N, context.T, context.A);
 		double tau = context.T / M;
 		double h = 1.0 / N;
 		
 		int N1 = N / 2;
-		int M1 = get_opt_m(N1, context.T, context.A);
 		
 		matrix u05 = implicit_scheme(
 						N, M, context.T, context, 0.5,
@@ -393,18 +400,100 @@ void print_residuals(
 						}
 					);
 		matrix u05_1 = implicit_scheme(
-						N1, M1, context.T, context, 0.5,
+						N1, M, context.T, context, 0.5,
 						[](vec _t, int _k, double _tau){
 							return _t[_k] - _tau / 2;
 						}
 					);
 
-		helper_residuals(N, M, N1, M1, tau, h, u05, u05_1, context);
+		helper_residuals(
+					N, M, N1, M, tau,
+					h, u05, u05_1, context
+				);
+
+		N *= 2;
+	}
+
+	printf("\nimplicit sigma=1:\n");
+	N = 10;
+	for (int j=0; j<5; ++j)
+	{
+
+		double tau = context.T / M;
+		double h = 1.0 / N;
+		
+		int N1 = N / 2;
+		
+		matrix u1 = implicit_scheme(
+						N, M, context.T, context, 1,
+						[](vec _t, int _k, double _tau){
+							return _t[_k];
+						}
+					);
+		matrix u1_1 = implicit_scheme(
+						N1, M, context.T, context, 1,
+						[](vec _t, int _k, double _tau){
+							return _t[_k];
+						}
+					);
+
+		helper_residuals(
+					N, M, N1, M, tau,
+					h, u1, u1_1, context
+				);
 
 		N *= 2;
 	}
 
 }
+
+void ex0()
+{
+	Context cntx;
+
+	cntx.T = 0.1;
+	auto u_exact = [](double x, double t){
+		return x + t;
+	};
+	cntx.u_exact = u_exact;
+
+	cntx.A = 1.0;
+
+	cntx.a = [](double x, double t){
+		return cos(x);
+	};
+
+	cntx.b = [](double x, double t){
+		// b==0
+		return 0;
+	};
+
+	cntx.c = [](double x, double t){
+		// c==0
+		return 0;
+	};
+	
+	cntx.f = [](double x, double t){
+		return 1;
+	};
+
+	cntx.alpha = [](double t){
+		return 1;
+	};
+	
+	cntx.beta = [&](double t){
+		return u_exact(1, t);
+	};
+
+	cntx.phi = [&](double x){
+		return u_exact(x, 0);
+	};
+
+	print_big_grid(cntx);
+
+	print_residuals(cntx);
+}
+
 
 void ex1()
 {
@@ -460,7 +549,7 @@ void ex2()
 
 	cntx.T = 0.1;
 	auto u_exact = [](double x, double t){
-		return x*x*x * t*t*t;
+		return sin(2 * t + 1) + cos(2 * x);
 	};
 	cntx.u_exact = u_exact;
 
@@ -481,7 +570,7 @@ void ex2()
 	};
 	
 	cntx.f = [](double x, double t){
-		return 3 * t*t * x*x*x - cos(x)* 6*x * t*t*t;
+		return 2*cos(2*t+1) - cos(x) * (-4*cos(2*x));
 	};
 
 	cntx.alpha = [](double t){
@@ -501,13 +590,15 @@ void ex2()
 	print_residuals(cntx);
 }
 
-
 int main()
 {
-	printf("ex1:\n");
+	printf("ex0: u = x + t\n");
+	ex0();
+
+	printf("\n\n\n\nex1: u = x^3 + t^3\n");
 	ex1();
 
-	printf("\n\n\n\nex2:\n");
+	printf("\n\n\n\nex2: u = sin(2t+1) + cos(2x)\n");
 	ex2();
 }
 
