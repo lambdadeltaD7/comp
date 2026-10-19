@@ -419,10 +419,12 @@ def solve_adi(N, eps=1e-3, max_iter=5000, callback=None):
         Ay = apply_Ay(U, N)
         rhs_half = U - tau * Ay + tau * F
         Uhalf = adi_step_x(rhs_half, N, tau)
+        apply_boundary(Uhalf, N)
 
         Ax = apply_Ax(Uhalf, N)
         rhs_new = Uhalf - tau * Ax + tau * F
         Unew = adi_step_y(rhs_new, N, tau)
+        apply_boundary(Unew, N)
 
         U = Unew
 
